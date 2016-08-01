@@ -4,7 +4,7 @@ var util = require('util');
 var defs = require("./botmisc.js");
 var botextapis = require('./botextapis.js');
 var async = require('async');
-require('request').debug = true;
+//require('request').debug = true;
 var requestlib = require('request');
 
 
@@ -21,8 +21,7 @@ function errorCallback(msg, exceptionContent){
 
 // Setup Restify Server
 var server = restify.createServer();
-//server.listen(process.env.port || process.env.PORT || 3978, function () {
-server.listen(3978, function () {
+server.listen(process.env.port || process.env.PORT || 3978, function () {
    console.log('%s listening to %s', server.name, server.url); 
 });
   
