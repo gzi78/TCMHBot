@@ -10,6 +10,7 @@ var HeaderTemplate1 = {
   "MaxDataServiceVersion" : "3.0;NetFx"
 }
 
+
 var HeaderTemplate = {
   "x-ms-version" : "2015-04-05",
   "x-ms-date" : "",
@@ -20,20 +21,46 @@ var HeaderTemplate = {
   "MaxDataServiceVersion" : "3.0;NetFx"
 }
 
+var ServiceBusQueueTopicHeaderTemplate = {
+    "Authorization" : "SharedAccessSignature sr=%s&sig=%s&se=%s&skn=%s"
+}
+
+var templates = 
+{
+    TABLE_SHAREDKEY_SIGNATURE_TEMPLATE : "GET\n" + "\n" + "\n" + "%s\n" + "/%s/%s()",
+    SB_QUEUE_SIGNATURE_TEMPLATE : '%s\n%s',
+    SB_QUEUE_TARGET_URI_TEMPLATE : 'https://%s.servicebus.windows.net/',
+    SB_QUEUE_TARGET_ENDPOINT_TEMPLATE : '%s%s/messages?timeout=60&api-version=2013-08'
+}
 
 var conf = {
     NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
     STORAGE_NAME: process.env.STORAGE_NAME,
     STORAGE_ACCESS_KEY: process.env.STORAGE_ACCESS_KEY,
     STORAGE_TABLE_NAME: process.env.STORAGE_TABLE_NAME,
-    OPENWEATHER_APPID: process.env.OPENWEATHER_APPID
+    OPENWEATHER_APPID: process.env.OPENWEATHER_APPID,
+    SB_METEO_SVC_QUEUE_NAMESPACE: process.env.SB_METEO_SVC_QUEUE_NAMESPACE,
+    SB_METEO_SVC_QUEUE_NAME: process.env.SB_METEO_SVC_QUEUE_NAME,
+    SB_METEO_SVC_QUEUE_SAS_KEY_NAME: process.env.SB_METEO_SVC_QUEUE_SAS_KEY_NAME,
+    SB_METEO_SVC_QUEUE_SAS_TOKEN: process.env.SB_METEO_SVC_QUEUE_SAS_TOKEN,
+    SB_REGISTRATION_SVC_QUEUE_NAMESPACE: process.env.SB_REGISTRATION_SVC_QUEUE_NAMESPACE,
+    SB_REGISTRATION_SVC_QUEUE_NAME: process.env.SB_REGISTRATION_SVC_QUEUE_NAME,
+    SB_REGISTRATION_SVC_QUEUE_SAS_KEY_NAME: process.env.SB_REGISTRATION_SVC_QUEUE_SAS_KEY_NAME,
+    SB_REGISTRATION_SVC_QUEUE_SAS_TOKEN: process.env.SB_REGISTRATION_SVC_QUEUE_SAS_TOKEN,
+    SB_SURVEY_SVC_QUEUE_NAMESPACE: process.env.SB_SURVEY_SVC_QUEUE_NAMESPACE,
+    SB_SURVEY_SVC_QUEUE_NAME: process.env.SB_SURVEY_SVC_QUEUE_NAME,
+    SB_SURVEY_SVC_QUEUE_SAS_KEY_NAME: process.env.SB_SURVEY_SVC_QUEUE_SAS_KEY_NAME,
+    SB_SURVEY_SVC_QUEUE_SAS_TOKEN: process.env.SB_SURVEY_SVC_QUEUE_SAS_TOKEN    
 }
 
 module.exports = {
-    helpMessage: "Here's what I can do:\n\n" +
-    "* Create new tasks by saying something like 'add a new task to go to the gym'\n" +
-    "* List your existing tasks by saying something like 'what do I have to do?'\n" +
-    "* Finish an existing task by saying something like 'remove go to the gym'",
+    sayHello : "Bonjour, bienvenue sur notre BOT",
+    helpMessage: "Voici les quelques services que je peux vous rendre:\n\n" +
+    "* Pour la météo de votre ville, tapez M\n" +
+    "* Pour votre demande d'inscription, tapez I\n" +
+    "* Pour participer à notre enquête, tapez E",
+    registerMember : "Passons à l'enregistrement de la première personne",
+    resgisterNextMember : "Passons à une nouvelle personne",
     canceled: 'Sure... No problem.',
     saveTaskCreated: "Created a new task called '%(task)s'",
     saveTaskMissing: 'What would you like to name the task?',
@@ -43,12 +70,6 @@ module.exports = {
     finishTaskMissing: "Which task would you like to delete?",
     finishTaskDone: "Removed '%(task)s' from your task list."
 }
-
-module.exports.STRINGS = 
-{
-    TABLE_SHAREDKEY_SIGNATURE_TEMPLATE : "GET\n" + "\n" + "\n" + "%s\n" + "/%s/%s()"
-}
-
 
 function capitalize(str) {
     var strVal = '';
@@ -67,5 +88,7 @@ function capitalize(str) {
 
 module.exports.HeaderTemplate1 = HeaderTemplate1;
 module.exports.HeaderTemplate = HeaderTemplate;
+module.exports.ServiceBusQueueTopicHeaderTemplate = ServiceBusQueueTopicHeaderTemplate;
 module.exports.conf = conf;
+module.exports.templates = templates;
 module.exports.capitalize = capitalize;

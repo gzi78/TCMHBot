@@ -7,13 +7,10 @@ var async = require('async');
 //require('request').debug = true;
 var requestlib = require('request');
 
-
-
 function errorCallback(msg, exceptionContent){
     console.log("Error occured : " + msg);
     console.log(exceptionContent);
 };
-
 
 //=========================================================
 // Bot Setup
@@ -38,7 +35,6 @@ server.get(/.*/, restify.serveStatic({
  	'directory': '.', 
  	'default': 'index.html' 
 })); 
-
 
 //=========================================================
 // Bots Dialogs
@@ -69,13 +65,16 @@ intents.onDefault([
 
 bot.dialog('/welcome', [
     function (session) {
-        session.send(defs.helpMessage);
-        builder.Prompts.text(session, 'Bonjour, bienvenue sur notre BOT. Pour la météo dans le monde, tapez M, pour notre service de réinscription, tapez I');
+        session.send(defs.sayHello);
+        builder.Prompts.text(session, defs.helpMessage);
     },
     function (session, results) {
         if (results.response === "I")
         {
+            
             session.beginDialog("/inscr");
+            
+            
         }
         else if (results.response === "M") 
         {
@@ -85,6 +84,7 @@ bot.dialog('/welcome', [
         {
             session.beginDialog('/');
         }
+        
     }
 
 ]);
@@ -113,8 +113,11 @@ bot.dialog('/singlemember', [
         {
             session.dialogData.relatedIndex++;
         }
-        
-        builder.Prompts.text(session,"Nom ?" + args.nbRelated + " - " + session.dialogData.relatedIndex);
+        if (session.userData.foundMember.related.length === 0)
+            session.send(defs.registerMember);
+        else
+            session.send(defs.resgisterNextMember);
+        builder.Prompts.text(session,"Nom ?");
     },
     function (session, results, next) {
         var currentRelated = { nom : results.response, prenom : '', datenaissance : '', formuleadhesion : '', formulecours : '' } ;
@@ -178,31 +181,44 @@ bot.dialog('/singlemember', [
 
 bot.dialog('/inscr', [
     function (session) {
-        builder.Prompts.text(session,"Pouvez-vous me rappeler votre numéro de licence");
+        builder.Prompts.text(session,"Pouvez-vous me rappeler votre numéro de licence ?");
     },
-    function (session, results) {
-        session.send("Je recherche les informations vous concernant. Un petit instant");
+    function (session, results, next) {
+        session.send(util.format("Je recherche les informations vous concernant pour le numéro %s. Un petit instant", results.response));
         setTimeout(function() {
             botextapis.GetUserDataV1(errorCallback, results.response, function(errorCallback, memberInfo){
-                
+               
                 session.userData.foundMember = memberInfo.value[0];
-                session.send("J'ai retrouvé ces éléments:");
-                var stringToFill = util.format("%s %s, résidant à l'adresse %s %s %s",
-                    session.userData.foundMember.nom,
-                    session.userData.foundMember.prenom,
-                    session.userData.foundMember.adresse1,
-                    session.userData.foundMember.cp,
-                    session.userData.foundMember.ville);
-                
-                session.send(stringToFill);
-                
-                builder.Prompts.confirm(session,"Etes-vous bien la personne concernée ?");
+                if (session.userData.foundMember != null)
+                {
+                    session.send("J'ai retrouvé ces éléments:");
+                    var stringToFill = util.format("%s %s, résidant à l'adresse %s %s %s",
+                        session.userData.foundMember.nom,
+                        session.userData.foundMember.prenom,
+                        session.userData.foundMember.adresse1,
+                        session.userData.foundMember.cp,
+                        session.userData.foundMember.ville);
+                    session.userData.SearchOk = true;
+                    session.send(stringToFill);
+                    
+                    builder.Prompts.confirm(session,"Etes-vous bien la personne concernée ?");
+                }
+                else
+                {
+                    session.userData.SearchOk = false;
+                    session.send("Le numéro saisi n'a pas permis de vous identifier. Merci de renouveler votre demande après vérification.");
+                    next();
+                }
             });
         }, 1000);
         
     },
     function (session, results) {
-        if (results.response === true)
+        if (session.userData.SearchOk == false )
+        {
+            session.endDialog({ resumed: builder.ResumeReason.canceled });
+        }
+        else if (results.response == true)
         {
             session.send("merci... Nous allons maintenant procéder à la vérification des informations à notre disposition");
             var promptMsg = util.format("Habitez-vous toujours au %s %s %s", session.userData.foundMember.adresse1, session.userData.foundMember.cp, session.userData.foundMember.ville);
@@ -210,9 +226,7 @@ bot.dialog('/inscr', [
         }
         else {
              session.send("Très bien, c'est curieux... Je vais tenter de vous contacter ultérieurement pour vérifier cela. Désolé de cet incident. A bientôt");
-             session.endDialogWithResult({
-                resumed: builder.ResumeReason.notCompleted
-            });
+             session.endDialogWithResult();
         }
 
     },
@@ -300,10 +314,19 @@ bot.dialog('/inscr', [
     function (session, results) {
         builder.Prompts.confirm(session,'Merci pour ces éléments. Etes-vous prêt à lancer la simulation de votre cotisation ?');
     },
+    function (session, results) {
+        builder.Prompts.number(session,'Pourriez-vous donner une note sur la qualité de mon service (0 à 5) ?');
+    },
     function (session, results, next) {
+        session.userData.foundMember.ExperienceMark = results.response;
+        next();
+    },
+    function (session, results, next) {
+        botextapis.SendRegistrationMessage(errorCallback, session.userData.foundMember, function (err, msg){
+            
+        });
         session.endDialog("Merci et à bientôt !!!");
     }
-    
 ]);
 
 
@@ -356,4 +379,6 @@ bot.dialog('/meteo', [
         session.endDialogWithResult();
         }
 ]);
+
+
 

@@ -2,9 +2,16 @@ var util = require('util');
 var http = require('http');
 var https = require('https');
 var crypto = require("crypto");
+var moment = require('moment');
+var querystring = require("querystring");
+
 var defs = require("./botmisc.js");
 
+
 var requestlib = require('request');
+
+//require('request-debug')(requestlib);
+
 
 var OpenWeatherOptions = {
     host: 'api.openweathermap.org',
@@ -21,12 +28,123 @@ var TableStorageOptions = {
     headers: {}
 }
 
+var SBQueueOptions = {
+    host : "",
+    port : "443",
+    uri : "https://%s.servicebus.windows.net/%s/messages?timeout=60&api-version=2013-08",
+    method: "POST",
+    proxy: "", //http://127.0.0.1:8888",
+    body : {},
+    headers : {}
+}
+
+function GetAzureAuthorizationHeaderForServiceBusQueue(targetUri, sasKeyName, sasKeyToken, refHeader, cb)
+{
+    
+    var urlEncodedTargetUri = encodeURIComponent(targetUri);
+    var mt1 = moment().unix();
+    var expirationDate = Math.round(mt1 + 3600);
+    
+    var stringToSign = util.format(defs.templates.SB_QUEUE_SIGNATURE_TEMPLATE, urlEncodedTargetUri, expirationDate); 
+        
+    // create base64 encoded signature
+    var key = sasKeyToken; //new Buffer(sasKeyToken, "base64").toString();
+    var hmac = crypto.createHmac("sha256", key);
+    
+    hmac.update(stringToSign);
+    var sig = hmac.digest("base64");
+    sig = encodeURIComponent(sig);
+    
+    refHeader = JSON.parse(JSON.stringify(defs.ServiceBusQueueTopicHeaderTemplate));
+    
+    refHeader["Authorization"] =  util.format(refHeader["Authorization"], 
+        urlEncodedTargetUri,
+        sig, 
+        expirationDate, 
+        sasKeyName
+    );
+    
+    var headerJSON = refHeader; 
+    
+    cb(sig, headerJSON);
+}
+
+function SendMeteoMessage(err, messageToSend, cb){
+    var targetUri = util.format(defs.templates.SB_QUEUE_TARGET_URI_TEMPLATE, 
+        defs.conf.SB_METEO_SVC_QUEUE_NAMESPACE);
+
+    var sasKeyName = defs.conf.SB_METEO_SVC_QUEUE_SAS_KEY_NAME;
+    var sasKeyToken = defs.conf.SB_METEO_SVC_QUEUE_SAS_TOKEN;
+    var queueName = defs.conf.SB_METEO_SVC_QUEUE_NAME;
+    SendCollectedData(err, messageToSend, targetUri, queueName, sasKeyName, sasKeyToken, function cb (err, data){
+        if (!err)
+            console.log("sent meteo message");
+        else
+            console.log("Error sending meteo message:" + err);    
+    });
+    cb(err, messageToSend);
+}
+
+function SendRegistrationMessage(err, messageToSend, cb){
+    var targetUri = util.format(defs.templates.SB_QUEUE_TARGET_URI_TEMPLATE, 
+        defs.conf.SB_REGISTRATION_SVC_QUEUE_NAMESPACE);
+
+    var sasKeyName = defs.conf.SB_REGISTRATION_SVC_QUEUE_SAS_KEY_NAME;
+    var sasKeyToken = defs.conf.SB_REGISTRATION_SVC_QUEUE_SAS_TOKEN;
+                              
+    var queueName = defs.conf.SB_REGISTRATION_SVC_QUEUE_NAME;
+    SendCollectedData(err, messageToSend, targetUri, queueName, sasKeyName, sasKeyToken, function cb (err, data){
+        if (!err)
+            console.log("sent registration message");
+        else
+            console.log("Error sending registration message:" + err);    
+    });
+    cb(err, messageToSend);
+}
+
+function SendSurveyMessage(err, messageToSend, cb){
+    
+    var targetUri = util.format(defs.templates.SB_QUEUE_TARGET_URI_TEMPLATE, 
+        defs.conf.SB_SURVEY_SVC_QUEUE_NAMESPACE);
+    var sasKeyName = defs.conf.SB_SURVEY_SVC_QUEUE_SAS_KEY_NAME;
+    var sasKeyToken = defs.conf.SB_SURVEY_SVC_QUEUE_SAS_TOKEN;
+    var queueName = defs.conf.SB_SURVEY_SVC_QUEUE_NAME;
+    SendCollectedData(err, messageToSend, targetUri, queueName, sasKeyName, sasKeyToken, function cb (err, data){
+        if (!err)
+            console.log("sent survey message");
+        else
+            console.log("Error sending survey message:" + err);    
+    });
+    cb(err, messageToSend);
+}
+
+function SendCollectedData(err, messageToSend,  targetUri, queueName, sasKeyName, sasKeyToken, memberInfoCallback) {
+    var mySBQueueOptions = JSON.parse(JSON.stringify(SBQueueOptions));
+    mySBQueueOptions.uri = util.format(defs.templates.SB_QUEUE_TARGET_ENDPOINT_TEMPLATE, targetUri, queueName);
+    mySBQueueOptions.body = JSON.stringify(messageToSend);                                                   
+    GetAzureAuthorizationHeaderForServiceBusQueue (targetUri, sasKeyName, sasKeyToken, mySBQueueOptions.headers, function(key, jsonHeader) {
+
+        mySBQueueOptions.headers = jsonHeader;
+        requestlib(mySBQueueOptions, function callback(error, response, body) {
+            if (!error && response.statusCode === 200) {
+                var info = JSON.parse(body);
+            }
+            else
+            {
+                //console.log("Erreor Code" + error.code); 
+                //memberInfoCallback(error, info);      
+            }
+        });
+    });
+}
+
+
 function GetAzureAuthorizationHeaderForTableStorage (req, refHeader, micb, cb) {
-    console.log("GetAzureAuthorizationHeaderForTableStorage" + defs.STRINGS.TABLE_SHAREDKEY_SIGNATURE_TEMPLATE);
+    console.log("GetAzureAuthorizationHeaderForTableStorage" + defs.templates.TABLE_SHAREDKEY_SIGNATURE_TEMPLATE);
     var accesskey = defs.conf.STORAGE_ACCESS_KEY;
     var curUTCDateStr  = new Date().toUTCString();
   
-    var stringToSign = util.format(defs.STRINGS.TABLE_SHAREDKEY_SIGNATURE_TEMPLATE, 
+    var stringToSign = util.format(defs.templates.TABLE_SHAREDKEY_SIGNATURE_TEMPLATE, 
         curUTCDateStr, defs.conf.STORAGE_NAME, defs.conf.STORAGE_TABLE_NAME);
     console.log(stringToSign);
     // create base64 encoded signature
@@ -51,18 +169,13 @@ function GetAzureAuthorizationHeaderForTableStorage (req, refHeader, micb, cb) {
     refHeader["MaxDataServiceVersion"] =  DataSvcVersion;
     
     var headerJSON = refHeader; 
-
-    console.log("SIG: " + sig);
     
     cb(sig, headerJSON);
 }
 
 function callback(error, response, body) {
   if (!error && response.statusCode === 200) {
-    var info = JSON.parse(body);
-    console.log(info.name);
-    console.log(info.main.temp);
-    
+    var info = JSON.parse(body);   
   }
   else
   {
@@ -75,7 +188,6 @@ function callback(error, response, body) {
 
 function GetUserDataV1(err, numLicence, memberInfoCallback) {
     var myTableStorageOptions = JSON.parse(JSON.stringify(TableStorageOptions));
-    //myTableStorageOptions.path = util.format(myTableStorageOptions.path, numLicence);
     myTableStorageOptions.uri = util.format(myTableStorageOptions.uri, numLicence);
     console.log(myTableStorageOptions);
     GetAzureAuthorizationHeaderForTableStorage (myTableStorageOptions.host, myTableStorageOptions.headers, memberInfoCallback, function(key, jsonHeader) {
@@ -97,7 +209,6 @@ function GetUserDataV1(err, numLicence, memberInfoCallback) {
 
 function GetMeteoData(err, city, country, memberInfoCallback) {
     var myTableStorageOptions = JSON.parse(JSON.stringify(TableStorageOptions));
-    //myTableStorageOptions.path = util.format(myTableStorageOptions.path, numLicence);
     var myOpenWeatherOptions = JSON.parse(JSON.stringify(OpenWeatherOptions));
     myOpenWeatherOptions.uri = util.format(myOpenWeatherOptions.uri, city, country);
     console.log('MyOpenWeatherOptions');
@@ -188,12 +299,12 @@ function GetWindDirection(weatherDataWind)
 }
 
 
-
-
-
 module.exports.OpenWeatherOptions = OpenWeatherOptions;
 module.exports.GetMeteoData = GetMeteoData;
 module.exports.GetMeteoData1 = GetMeteoData1;
 module.exports.GetAzureAuthorizationHeaderForTableStorage = GetAzureAuthorizationHeaderForTableStorage;
 module.exports.GetUserDataV1 = GetUserDataV1;
 module.exports.GetWindDirection = GetWindDirection;
+module.exports.SendMeteoMessage = SendMeteoMessage;
+module.exports.SendRegistrationMessage = SendRegistrationMessage;
+module.exports.SendSurveyMessage = SendSurveyMessage;
