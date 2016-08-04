@@ -57,11 +57,19 @@ intents.matches(/^M/i, [
 ]
 )
 
+intents.matches(/^S/i, [
+    function (session) {
+        session.beginDialog('/game');
+    }
+]
+)
+
 intents.onDefault([
     function (session) {
         session.beginDialog('/welcome');
     }
 ]);
+
 
 bot.dialog('/welcome', [
     function (session) {
@@ -70,21 +78,21 @@ bot.dialog('/welcome', [
     },
     function (session, results) {
         if (results.response === "I")
-        {
-            
-            session.beginDialog("/inscr");
-            
-            
+        {         
+            session.beginDialog("/inscr");   
         }
         else if (results.response === "M") 
         {
             session.beginDialog('/meteo');
         }
+        else if (results.response === "E") 
+        {
+            session.beginDialog('/game');
+        }
         else
         {
             session.beginDialog('/');
         }
-        
     }
 
 ]);
@@ -133,7 +141,7 @@ bot.dialog('/singlemember', [
         next();
     },
     function (session, results) {
-        builder.Prompts.time(session,util.format('Date de naissance de ?', session.userData.foundMember.related[session.userData.foundMember.related.length - 1].prenom));
+        builder.Prompts.time(session,util.format('Date de naissance de %s ?', session.userData.foundMember.related[session.userData.foundMember.related.length - 1].prenom));
     },
     function (session, results, next) {  
         session.userData.foundMember.related[session.userData.foundMember.related.length - 1].datenaissance = results.response;
@@ -338,17 +346,17 @@ bot.dialog('/meteo', [
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
-        session.userData.city = results.response;
-        builder.Prompts.text(session,util.format('%s, dans quel pays ? Je ne suis pas fort en géographie', session.userData.city));
+        session.userData.meteoData = { requestedCity : "", requestedCountry : "" };
+        session.userData.meteoData.requestedCity = results.response;
+        builder.Prompts.text(session,util.format('%s, dans quel pays ? Je ne suis pas fort en géographie', session.userData.meteoData.requestedCity));
     },
     function (session, results, next) {
         //session.send('Bonjour %s !', results.response);
-        session.userData.country = results.response;
-        
-        var retTemp ;
-        session.send(util.format('Je consulte immédiatement la météo de %s, %s', session.userData.city, session.userData.country ));
+        session.userData.meteoData.requestedCountry = results.response;
+
+        session.send(util.format('Je consulte immédiatement la météo de %s, %s', session.userData.meteoData.requestedCity, session.userData.meteoData.requestedCountry ));
                 
-        botextapis.GetMeteoData(errorCallback, session.userData.city, session.userData.country , function(errorCallback, meteoData){
+        botextapis.GetMeteoData(errorCallback, session.userData.meteoData.requestedCity, session.userData.meteoData.requestedCountry , function(errorCallback, meteoData){
             
             var msg = new builder.Message(session)
             .textFormat(builder.TextFormat.markdown)
@@ -356,7 +364,7 @@ bot.dialog('/meteo', [
                 // This is the actual hero card. For each card you can add the
                 // specific options like title, text and so on.
                 new builder.HeroCard(session)
-                    .title(defs.capitalize(session.userData.city) + ", " + defs.capitalize(session.userData.country))
+                    .title(defs.capitalize(session.userData.meteoData.requestedCity) + ", " + defs.capitalize(session.userData.meteoData.requestedCountry))
                     .subtitle(meteoData.weather[0].description)
                     .text("Température : " + meteoData.main.temp + "°C" +
                     " - Direction du vent : " + botextapis.GetWindDirection(meteoData.wind) + 
@@ -374,11 +382,92 @@ bot.dialog('/meteo', [
         });
         
     },
-    function (session, results) {
-        //session.send('Bonjour %s !', results.response);
-        session.endDialogWithResult();
-        }
+    function (session, results, next) {
+        console.log("MeteoData:" + session.userData.meteoData);
+        botextapis.SendMeteoMessage(errorCallback, session.userData.meteoData, function (err, msg){
+            
+        });
+        session.endDialog("Merci et à bientôt !!!");
+    }
 ]);
 
 
 
+bot.dialog('/game', [
+    function (session) {
+        
+        builder.Prompts.choice(session,"Nous allons jouer à un jeu... Pouvez-vous me donner un chiffre entre 1 et 10 ?", "1|2|3|4|5|6|7|8|9|10" );  
+    },
+    function (session, results, next) {
+        session.userData.surveyData = { chosenNumber : -1 , ageRange : "", gender : "", previousPlayer : "", astonished : "", ExperienceMark : "" };
+        //session.send('Bonjour %s !', results.response);
+        console.log(results.response.entity);
+        var numberRes = parseInt(results.response.entity);
+        if (numberRes > 0 && numberRes <= 10)
+        {
+            session.userData.surveyData.chosenNumber = numberRes;
+            next();
+        }
+        else
+        {
+            session.send( numberRes + " n'est pas compris entre 1 et 10. Pouvez-vous retenter ?")
+        }
+    },
+    function (session, results) {
+        //session.send('Bonjour %s !', results.response);
+        builder.Prompts.choice(session, "Pouvez-vous m'indiquer votre âge dans les tranches suivantes ?", ["1-20", "21-30","31-40","51-60","61-80 ou plus"] );
+        session.userData.surveyData.ageRange = results.response.entity;
+    },
+    function (session, results) {
+        //session.send('Bonjour %s !', results.response);
+        builder.Prompts.choice(session, "Etes-vous un homme ou une femme ?", ["Homme","Femme"] );
+        session.userData.surveyData.gender = results.response;
+    },
+    function (session, results) {
+        builder.Prompts.confirm(session, "Avez-vous déjà joué ici avec moi ?");
+        
+    },
+    function (session, results) {
+        console.log(results.response);
+        session.userData.surveyData.previousPlayer = results.response.entity;
+        session.send("Vous aviez choisi le nombre" + session.userData.surveyData.chosenNumber + ". ");
+        builder.Prompts.confirm(session, "Multipliez ce chifre par 2, ajoutez 8, divisez le par 2 et retranché le chiffre pensé au début par le chiffre obtenu ici... Etes-vous prêt pour la suite ?" );
+    },
+    function (session, results) {
+        builder.Prompts.confirm(session, "Pour le nombre trouvé, faites lui correspondre la lettre de l'alphabet (Par exemple, 1 - A, 2 - B etc.... Etes-vous prêt ?");
+    },
+    function (session, results) {
+        //session.send('Bonjour %s !', results.response);
+        builder.Prompts.confirm(session, "Pensez très fort à un animal commençant par cette lettre. Etes-vous prêt ?");
+    },
+    function (session, results) {
+        //session.send('Bonjour %s !', results.response);
+        builder.Prompts.confirm(session, "Pensez à un pays qui commencerait par la lettre qui suit cette première lettre. Par exemple, si vous aviez trouvé A, pensez très fort à un pays qui commence par la lettre B etc.... Etes-vous prêt ?");
+    },
+    function (session, results) {
+        //session.send('Bonjour %s !', results.response);
+        builder.Prompts.confirm(session, "Enfin, pensez très fort à la couleur de l'animal que vous aviez choisi. Etes-vous prêt ?");
+    },
+    function (session, results) {
+        session.send("Voyons, êtes vous réellement certain que l'on puisse trouver des éléphants gris au Danemark ?");
+        setTimeout(function() {
+            builder.Prompts.confirm(session,'Amusant non ? Vous ai-je épaté ?');
+        }, 3000);
+    },
+    function (session, results) {
+        session.userData.surveyData.astonished = results.response;
+        builder.Prompts.number(session,'Pourriez-vous donner une note sur la qualité de votre expérience (0 à 5) ?');
+    },
+    function (session, results, next) {
+        session.userData.surveyData.ExperienceMark = results.response;
+        next();
+    },
+    function (session, results, next) {
+        console.log("SurveyData");
+        if (session.userData.surveyData.astonished === true)
+            botextapis.SendSurveyMessage(errorCallback, session.userData.surveyData, function (err, msg){
+            
+        });
+        session.endDialog("Merci et à bientôt !!!");
+    } 
+]);
