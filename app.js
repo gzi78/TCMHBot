@@ -423,14 +423,16 @@ bot.dialog('/game', [
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
         builder.Prompts.number(session, "Pouvez-vous m'indiquer votre âge ou 0 si vous ne voulez pas :( ?" );
-        session.userData.surveyData.PeopleAge = results.response;
+        
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
+        session.userData.surveyData.PeopleAge = results.response;
         builder.Prompts.choice(session, "Etes-vous un homme(1) ou une femme(2) ?", ["Homme","Femme"] );
-        session.userData.surveyData.PeopleGender = results.response;
+        
     },
     function (session, results) {
+        session.userData.surveyData.PeopleGender = results.response;
         builder.Prompts.confirm(session, "Avez-vous déjà joué ici avec moi ?");
         
     },
