@@ -38,7 +38,7 @@ var SBQueueOptions = {
     headers : {}
 }
 
-function GetAzureAuthorizationHeaderForServiceBusQueue(targetUri, sasKeyName, sasKeyToken, refHeader, cb)
+function GetAzureAuthorizationHeaderForServiceBusQueue(err, targetUri, sasKeyName, sasKeyToken, refHeader, cb)
 {
     
     var urlEncodedTargetUri = encodeURIComponent(targetUri);
@@ -46,27 +46,34 @@ function GetAzureAuthorizationHeaderForServiceBusQueue(targetUri, sasKeyName, sa
     var expirationDate = Math.round(mt1 + 3600);
     
     var stringToSign = util.format(defs.templates.SB_QUEUE_SIGNATURE_TEMPLATE, urlEncodedTargetUri, expirationDate); 
+    
+    try
+    {
+        // create base64 encoded signature
+        var key = sasKeyToken; //new Buffer(sasKeyToken, "base64").toString();
+        var hmac = crypto.createHmac("sha256", key);
         
-    // create base64 encoded signature
-    var key = sasKeyToken; //new Buffer(sasKeyToken, "base64").toString();
-    var hmac = crypto.createHmac("sha256", key);
+        hmac.update(stringToSign);
+        var sig = hmac.digest("base64");
+        sig = encodeURIComponent(sig);
+        
+        refHeader = JSON.parse(JSON.stringify(defs.ServiceBusQueueTopicHeaderTemplate));
+        
+        refHeader["Authorization"] =  util.format(refHeader["Authorization"], 
+            urlEncodedTargetUri,
+            sig, 
+            expirationDate, 
+            sasKeyName
+        );
+        
+        var headerJSON = refHeader;
+        cb(null, sig, headerJSON);
+    }
+    catch(error)
+    {
+        cb(error, sig, headerJSON);
+    }
     
-    hmac.update(stringToSign);
-    var sig = hmac.digest("base64");
-    sig = encodeURIComponent(sig);
-    
-    refHeader = JSON.parse(JSON.stringify(defs.ServiceBusQueueTopicHeaderTemplate));
-    
-    refHeader["Authorization"] =  util.format(refHeader["Authorization"], 
-        urlEncodedTargetUri,
-        sig, 
-        expirationDate, 
-        sasKeyName
-    );
-    
-    var headerJSON = refHeader; 
-    
-    cb(sig, headerJSON);
 }
 
 function SendMeteoMessage(err, messageToSend, cb){
@@ -122,11 +129,11 @@ function SendCollectedData(err, messageToSend,  targetUri, queueName, sasKeyName
     var mySBQueueOptions = JSON.parse(JSON.stringify(SBQueueOptions));
     mySBQueueOptions.uri = util.format(defs.templates.SB_QUEUE_TARGET_ENDPOINT_TEMPLATE, targetUri, queueName);
     mySBQueueOptions.body = JSON.stringify(messageToSend);                                                   
-    GetAzureAuthorizationHeaderForServiceBusQueue (targetUri, sasKeyName, sasKeyToken, mySBQueueOptions.headers, function(key, jsonHeader) {
+    GetAzureAuthorizationHeaderForServiceBusQueue (err, targetUri, sasKeyName, sasKeyToken, mySBQueueOptions.headers, function(err, key, jsonHeader) {
 
         mySBQueueOptions.headers = jsonHeader;
-        requestlib(mySBQueueOptions, function callback(error, response, body) {
-            if (!error && response.statusCode === 200) {
+        requestlib(mySBQueueOptions, function callback(err, response, body) {
+            if (!err && response.statusCode === 200) {
                 var info = JSON.parse(body);
             }
             else

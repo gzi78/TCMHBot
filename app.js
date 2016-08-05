@@ -326,11 +326,12 @@ bot.dialog('/inscr', [
         builder.Prompts.number(session,'Pourriez-vous donner une note sur la qualité de mon service (0 à 5) ?');
     },
     function (session, results, next) {
-        session.userData.foundMember.ExperienceMark = results.response;
+        session.userData.foundMember.SurveyMark = results.response;
         next();
     },
     function (session, results, next) {
-        botextapis.SendRegistrationMessage(errorCallback, session.userData.foundMember, function (err, msg){
+        var jsonNotif = { EventDateTime : new Date().toISOString(), SurveyType : "Registration", SurveyMark : session.userData.foundMember.SurveyMark, FirstName : session.userData.foundMember.prenom, LastName : session.userData.foundMember.nom, NumberOfRegistrations : session.userData.foundMember.related.length };
+        botextapis.SendRegistrationMessage(errorCallback, jsonNotif, function (err, msg){
             
         });
         session.endDialog("Merci et à bientôt !!!");
@@ -346,25 +347,26 @@ bot.dialog('/meteo', [
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
-        session.userData.meteoData = { requestedCity : "", requestedCountry : "" };
-        session.userData.meteoData.requestedCity = results.response;
-        builder.Prompts.text(session,util.format('%s, dans quel pays ? Je ne suis pas fort en géographie', session.userData.meteoData.requestedCity));
+        session.userData.meteoData = { City : "", Country : "", Latitude : "", Longitude : "", SurveyType : "MeteoData", EventDateTime : "" };
+        session.userData.meteoData.City = results.response;
+        builder.Prompts.text(session,util.format('%s, dans quel pays ? Je ne suis pas fort en géographie', session.userData.meteoData.City));
     },
     function (session, results, next) {
         //session.send('Bonjour %s !', results.response);
-        session.userData.meteoData.requestedCountry = results.response;
+        session.userData.meteoData.Country = results.response;
 
-        session.send(util.format('Je consulte immédiatement la météo de %s, %s', session.userData.meteoData.requestedCity, session.userData.meteoData.requestedCountry ));
+        session.send(util.format('Je consulte immédiatement la météo de %s, %s', session.userData.meteoData.City, session.userData.meteoData.Country ));
                 
-        botextapis.GetMeteoData(errorCallback, session.userData.meteoData.requestedCity, session.userData.meteoData.requestedCountry , function(errorCallback, meteoData){
-            
+        botextapis.GetMeteoData(errorCallback, session.userData.meteoData.City, session.userData.meteoData.Country , function(errorCallback, meteoData){
+            session.userData.meteoData.Latitude = meteoData.coord.Lat;
+            session.userData.meteoData.Longitude = meteoData.coord.Lon;
             var msg = new builder.Message(session)
             .textFormat(builder.TextFormat.markdown)
             .attachments([
                 // This is the actual hero card. For each card you can add the
                 // specific options like title, text and so on.
                 new builder.HeroCard(session)
-                    .title(defs.capitalize(session.userData.meteoData.requestedCity) + ", " + defs.capitalize(session.userData.meteoData.requestedCountry))
+                    .title(defs.capitalize(session.userData.meteoData.City) + ", " + defs.capitalize(session.userData.meteoData.Country))
                     .subtitle(meteoData.weather[0].description)
                     .text("Température : " + meteoData.main.temp + "°C" +
                     " - Direction du vent : " + botextapis.GetWindDirection(meteoData.wind) + 
@@ -383,10 +385,15 @@ bot.dialog('/meteo', [
         
     },
     function (session, results, next) {
+        session.userData.meteoData.EventDateTime = new Date().toISOString();
         console.log("MeteoData:" + session.userData.meteoData);
         botextapis.SendMeteoMessage(errorCallback, session.userData.meteoData, function (err, msg){
-            
+            if(err)
+            {
+                session.send("Une erreur est survenue quelque part...");
+            }    
         });
+        
         session.endDialog("Merci et à bientôt !!!");
     }
 ]);
@@ -399,13 +406,13 @@ bot.dialog('/game', [
         builder.Prompts.choice(session,"Nous allons jouer à un jeu... Pouvez-vous me donner un chiffre entre 1 et 10 ?", "1|2|3|4|5|6|7|8|9|10" );  
     },
     function (session, results, next) {
-        session.userData.surveyData = { chosenNumber : -1 , ageRange : "", gender : "", previousPlayer : "", astonished : "", ExperienceMark : "" };
+        session.userData.surveyData = { SurveyType : "NumberChoice", ChosenNumber : -1 , PeopleAge : "", PeopleGender : "", previousPlayer : "", astonished : "", SurveyMark : "", EventDateTime : "" };
         //session.send('Bonjour %s !', results.response);
         console.log(results.response.entity);
         var numberRes = parseInt(results.response.entity);
         if (numberRes > 0 && numberRes <= 10)
         {
-            session.userData.surveyData.chosenNumber = numberRes;
+            session.userData.surveyData.ChosenNumber = numberRes;
             next();
         }
         else
@@ -416,12 +423,12 @@ bot.dialog('/game', [
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
         builder.Prompts.choice(session, "Pouvez-vous m'indiquer votre âge dans les tranches suivantes ?", ["1-20", "21-30","31-40","51-60","61-80 ou plus"] );
-        session.userData.surveyData.ageRange = results.response.entity;
+        session.userData.surveyData.PeopleAge = results.response.entity;
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
         builder.Prompts.choice(session, "Etes-vous un homme ou une femme ?", ["Homme","Femme"] );
-        session.userData.surveyData.gender = results.response;
+        session.userData.surveyData.PeopleGender = results.response;
     },
     function (session, results) {
         builder.Prompts.confirm(session, "Avez-vous déjà joué ici avec moi ?");
@@ -430,8 +437,7 @@ bot.dialog('/game', [
     function (session, results) {
         console.log(results.response);
         session.userData.surveyData.previousPlayer = results.response.entity;
-        session.send("Vous aviez choisi le nombre" + session.userData.surveyData.chosenNumber + ". ");
-        builder.Prompts.confirm(session, "Multipliez ce chifre par 2, ajoutez 8, divisez le par 2 et retranché le chiffre pensé au début par le chiffre obtenu ici... Etes-vous prêt pour la suite ?" );
+        builder.Prompts.confirm(session, "Vous aviez choisi le nombre [" + session.userData.surveyData.ChosenNumber + "], n'est-ce pas ? Multipliez ce chifre par 2, ajoutez 8, divisez le par 2 et retranché le chiffre pensé au début par le chiffre obtenu ici... Etes-vous prêt pour la suite ?" );
     },
     function (session, results) {
         builder.Prompts.confirm(session, "Pour le nombre trouvé, faites lui correspondre la lettre de l'alphabet (Par exemple, 1 - A, 2 - B etc.... Etes-vous prêt ?");
@@ -459,10 +465,11 @@ bot.dialog('/game', [
         builder.Prompts.number(session,'Pourriez-vous donner une note sur la qualité de votre expérience (0 à 5) ?');
     },
     function (session, results, next) {
-        session.userData.surveyData.ExperienceMark = results.response;
+        session.userData.surveyData.SurveyMark = results.response;
         next();
     },
     function (session, results, next) {
+        session.userData.surveyData.EventDateTime = new Date().toISOString();
         console.log("SurveyData");
         if (session.userData.surveyData.astonished === true)
             botextapis.SendSurveyMessage(errorCallback, session.userData.surveyData, function (err, msg){
