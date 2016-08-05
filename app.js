@@ -446,11 +446,11 @@ bot.dialog('/game', [
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
-        builder.Prompts.confirm(session, "Pensez très fort à un animal commençant par cette lettre. Etes-vous prêt ?");
+        builder.Prompts.confirm(session, "Pensez très fort à un pays commençant par cette lettre. Etes-vous prêt ?");
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
-        builder.Prompts.confirm(session, "Pensez à un pays qui commencerait par la lettre qui suit cette première lettre. Par exemple, si vous aviez trouvé A, pensez très fort à un pays qui commence par la lettre B etc.... Etes-vous prêt ?");
+        builder.Prompts.confirm(session, "Pensez à un animal qui commencerait par la lettre qui suit cette première lettre. Par exemple, si vous aviez trouvé A, pensez très fort à un animal qui commence par la lettre B etc.... Etes-vous prêt ?");
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
