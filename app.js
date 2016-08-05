@@ -422,12 +422,12 @@ bot.dialog('/game', [
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
-        builder.Prompts.choice(session, "Pouvez-vous m'indiquer votre âge dans les tranches suivantes ?", ["1-20", "21-30","31-40","51-60","61-80 ou plus"] );
-        session.userData.surveyData.PeopleAge = results.response.entity;
+        builder.Prompts.prompt(session, "Pouvez-vous m'indiquer votre âge ?" );
+        session.userData.surveyData.PeopleAge = results.response;
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
-        builder.Prompts.choice(session, "Etes-vous un homme ou une femme ?", ["Homme","Femme"] );
+        builder.Prompts.choice(session, "Etes-vous un homme(1) ou une femme(2) ?", ["Homme","Femme"] );
         session.userData.surveyData.PeopleGender = results.response;
     },
     function (session, results) {
@@ -436,7 +436,7 @@ bot.dialog('/game', [
     },
     function (session, results) {
         console.log(results.response);
-        session.userData.surveyData.previousPlayer = results.response.entity;
+        session.userData.surveyData.previousPlayer = results.response;
         builder.Prompts.confirm(session, "Vous aviez choisi le nombre [" + session.userData.surveyData.ChosenNumber + "], n'est-ce pas ? Multipliez ce chifre par 2, ajoutez 8, divisez le par 2 et retranché le chiffre pensé au début par le chiffre obtenu ici... Etes-vous prêt pour la suite ?" );
     },
     function (session, results) {
@@ -471,8 +471,8 @@ bot.dialog('/game', [
     function (session, results, next) {
         session.userData.surveyData.EventDateTime = new Date().toISOString();
         console.log("SurveyData");
-        if (session.userData.surveyData.astonished === true)
-            botextapis.SendSurveyMessage(errorCallback, session.userData.surveyData, function (err, msg){
+        //if (session.userData.surveyData.previousPlayer === true)
+        botextapis.SendSurveyMessage(errorCallback, session.userData.surveyData, function (err, msg){
             
         });
         session.endDialog("Merci et à bientôt !!!");
