@@ -331,8 +331,10 @@ bot.dialog('/inscr', [
     },
     function (session, results, next) {
         var jsonNotif = { EventDateTime : new Date().toISOString(), SurveyType : "Registration", SurveyMark : session.userData.foundMember.SurveyMark, FirstName : session.userData.foundMember.prenom, LastName : session.userData.foundMember.nom, NumberOfRegistrations : session.userData.foundMember.related.length };
-        botextapis.SendRegistrationMessage(errorCallback, jsonNotif, function (err, msg){
-            
+        botextapis.SendRegistrationMessage(errorCallback, session.userData.foundMember, function (err, msg){
+            botextapis.SendSurveyMessage(errorCallback, jsonNotif, function (err, msg){
+                
+            });
         });
         session.endDialog("Merci et à bientôt !!!");
     }
