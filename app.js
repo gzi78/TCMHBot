@@ -432,7 +432,7 @@ bot.dialog('/game', [
         
     },
     function (session, results) {
-        session.userData.surveyData.PeopleGender = results.response;
+        session.userData.surveyData.PeopleGender = results.response.entity;
         builder.Prompts.confirm(session, "Avez-vous déjà joué ici avec moi ?");
         
     },
