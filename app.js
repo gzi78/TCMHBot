@@ -403,13 +403,13 @@ bot.dialog('/meteo', [
 bot.dialog('/game', [
     function (session) {
         
-        builder.Prompts.choice(session,"Nous allons jouer à un jeu... Pouvez-vous me donner un chiffre entre 1 et 10 ?", "1|2|3|4|5|6|7|8|9|10" );  
+        builder.Prompts.prompt(session,"Nous allons jouer à un jeu... Pouvez-vous me donner un chiffre entre 1 et 10 ?" );  
     },
     function (session, results, next) {
         session.userData.surveyData = { SurveyType : "NumberChoice", ChosenNumber : -1 , PeopleAge : "", PeopleGender : "", previousPlayer : "", astonished : "", SurveyMark : "", EventDateTime : "" };
         //session.send('Bonjour %s !', results.response);
         console.log(results.response.entity);
-        var numberRes = parseInt(results.response.entity);
+        var numberRes = parseInt(results.response);
         if (numberRes > 0 && numberRes <= 10)
         {
             session.userData.surveyData.ChosenNumber = numberRes;
@@ -422,7 +422,7 @@ bot.dialog('/game', [
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
-        builder.Prompts.prompt(session, "Pouvez-vous m'indiquer votre âge ?" );
+        builder.Prompts.prompt(session, "Pouvez-vous m'indiquer votre âge ou 0 si vous ne voulez pas :( ?" );
         session.userData.surveyData.PeopleAge = results.response;
     },
     function (session, results) {
