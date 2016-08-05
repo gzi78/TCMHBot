@@ -358,8 +358,8 @@ bot.dialog('/meteo', [
         session.send(util.format('Je consulte immédiatement la météo de %s, %s', session.userData.meteoData.City, session.userData.meteoData.Country ));
                 
         botextapis.GetMeteoData(errorCallback, session.userData.meteoData.City, session.userData.meteoData.Country , function(errorCallback, meteoData){
-            session.userData.meteoData.Latitude = meteoData.coord.Lat;
-            session.userData.meteoData.Longitude = meteoData.coord.Lon;
+            session.userData.meteoData.Latitude = meteoData.coord.lat;
+            session.userData.meteoData.Longitude = meteoData.coord.lon;
             var msg = new builder.Message(session)
             .textFormat(builder.TextFormat.markdown)
             .attachments([
@@ -390,7 +390,7 @@ bot.dialog('/meteo', [
         botextapis.SendMeteoMessage(errorCallback, session.userData.meteoData, function (err, msg){
             if(err)
             {
-                session.send("Une erreur est survenue quelque part...");
+                //session.send("Une erreur est survenue quelque part...");
             }    
         });
         
