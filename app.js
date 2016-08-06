@@ -12,6 +12,7 @@ function errorCallback(msg, exceptionContent){
     console.log(exceptionContent);
 };
 
+
 //=========================================================
 // Bot Setup
 //=========================================================
@@ -40,11 +41,13 @@ server.get(/.*/, restify.serveStatic({
 // Bots Dialogs
 //=========================================================
 
+
 var intents = new builder.IntentDialog();
 bot.dialog('/', intents);
 
 intents.matches(/^I/i, [
     function (session) {
+        session.userData = {};
         session.beginDialog('/inscr');
     }
 ]
@@ -52,6 +55,7 @@ intents.matches(/^I/i, [
 
 intents.matches(/^M/i, [
     function (session) {
+        session.userData = {};
         session.beginDialog('/meteo');
     }
 ]
@@ -59,6 +63,7 @@ intents.matches(/^M/i, [
 
 intents.matches(/^S/i, [
     function (session) {
+        session.userData = {};
         session.beginDialog('/game');
     }
 ]
@@ -66,6 +71,7 @@ intents.matches(/^S/i, [
 
 intents.onDefault([
     function (session) {
+        session.userData = {};
         session.beginDialog('/welcome');
     }
 ]);
@@ -349,7 +355,7 @@ bot.dialog('/meteo', [
     },
     function (session, results) {
         //session.send('Bonjour %s !', results.response);
-        session.userData.meteoData = { City : "", Country : "", Latitude : "", Longitude : "", SurveyType : "MeteoData", EventDateTime : "" };
+        session.userData.meteoData = { City : "", Country : "", Latitude : "", Longitude : "", SurveyType : "MeteoData", EventDateTime : "", contextInfo : {} };
         session.userData.meteoData.City = results.response;
         builder.Prompts.text(session,util.format('%s, dans quel pays ? Je ne suis pas fort en géographie', session.userData.meteoData.City));
     },
@@ -388,6 +394,8 @@ bot.dialog('/meteo', [
     },
     function (session, results, next) {
         session.userData.meteoData.EventDateTime = new Date().toISOString();
+        
+        session.userData.contextInfo = session.address.message.user;
         console.log("MeteoData:" + session.userData.meteoData);
         botextapis.SendMeteoMessage(errorCallback, session.userData.meteoData, function (err, msg){
             if(err)
