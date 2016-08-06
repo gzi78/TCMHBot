@@ -12,7 +12,6 @@ function errorCallback(msg, exceptionContent){
     console.log(exceptionContent);
 };
 
-
 //=========================================================
 // Bot Setup
 //=========================================================
@@ -395,7 +394,7 @@ bot.dialog('/meteo', [
     function (session, results, next) {
         session.userData.meteoData.EventDateTime = new Date().toISOString();
         
-        session.userData.meteoData.contextInfo = JSON.Parse(JSON.stringify(session.message.address.user));
+        session.userData.meteoData.contextInfo = JSON.parse(JSON.stringify(session.message.address.user));
         console.log("MeteoData:" + session.userData.meteoData);
         botextapis.SendMeteoMessage(errorCallback, session.userData.meteoData, function (err, msg){
             if(err)
