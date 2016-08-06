@@ -388,7 +388,7 @@ bot.dialog('/meteo', [
             // Send the message to the user and end the dialog
             session.send(msg);
             
-            next(session, meteoData);
+            next();
         });
         
     },
