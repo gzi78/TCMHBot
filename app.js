@@ -448,7 +448,7 @@ bot.dialog('/game', [
     function (session, results) {
         console.log(results.response);
         session.userData.surveyData.previousPlayer = results.response;
-        builder.Prompts.confirm(session, "Vous aviez choisi le nombre [" + session.userData.surveyData.ChosenNumber + "], n'est-ce pas ? Multipliez ce chifre par 2, ajoutez 8, divisez le par 2 et retranché le chiffre pensé au début par le chiffre obtenu ici... Etes-vous prêt pour la suite ?" );
+        builder.Prompts.confirm(session, "Vous aviez choisi le nombre [" + session.userData.surveyData.ChosenNumber + "], n'est-ce pas ? Multipliez ce chiffre par 2, ajoutez 8, divisez le par 2 et retranché le chiffre pensé au début par le chiffre obtenu ici... Etes-vous prêt pour la suite ?" );
     },
     function (session, results) {
         builder.Prompts.confirm(session, "Pour le nombre trouvé, faites lui correspondre la lettre de l'alphabet (Par exemple, 1 - A, 2 - B etc.... Etes-vous prêt ?");
@@ -466,7 +466,7 @@ bot.dialog('/game', [
         builder.Prompts.confirm(session, "Enfin, pensez très fort à la couleur de l'animal que vous aviez choisi. Etes-vous prêt ?");
     },
     function (session, results) {
-        session.send("Voyons, êtes vous réellement certain que l'on puisse trouver des éléphants gris au Danemark ?");
+        session.send("Voyons, êtes vous réellement certain que l'on puisse trouver des ELEPHANTS GRIS au DANEMARK ?");
         setTimeout(function() {
             builder.Prompts.confirm(session,'Amusant non ? Vous ai-je épaté ?');
         }, 3000);
