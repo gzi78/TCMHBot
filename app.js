@@ -4,7 +4,7 @@ var util = require('util');
 var defs = require("./botmisc.js");
 var botextapis = require('./botextapis.js');
 var async = require('async');
-//require('request').debug = true;
+require('request').debug = true;
 var requestlib = require('request');
 
 function errorCallback(msg, exceptionContent){
