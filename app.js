@@ -365,9 +365,6 @@ bot.dialog('/meteo', [
         session.send(util.format('Je consulte immédiatement la météo de %s, %s', session.userData.meteoData.City, session.userData.meteoData.Country ));
                 
         botextapis.GetMeteoData(errorCallback, session.userData.meteoData.City, session.userData.meteoData.Country , function(errorCallback, meteoData){
-
-            if(!errorCallback)
-            {
             session.userData.meteoData.Latitude = meteoData.coord.lat;
             session.userData.meteoData.Longitude = meteoData.coord.lon;
             var msg = new builder.Message(session)
@@ -386,12 +383,7 @@ bot.dialog('/meteo', [
                         builder.CardImage.create(session, "http://openweathermap.org/img/w/" + meteoData.weather[0].icon + ".png")
                     ])
             ]);
-            }
-            else
-            {
-                var msg = new builder.Message(session)
-                .text("Une erreur est survenue. Je vous invite à renouveler votre demande...");
-            };
+
             // Send the message to the user and end the dialog
             session.send(msg);
             
