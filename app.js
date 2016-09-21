@@ -373,7 +373,7 @@ bot.dialog('/meteo', [
                 // This is the actual hero card. For each card you can add the
                 // specific options like title, text and so on.
                 new builder.HeroCard(session)
-                    .title(defs.capitalize(meteoData.name) + ", " + defs.capitalize(session.userData.meteoData.Country))
+                    .title(defs.capitalize(session.userData.meteoData.City) + ", " + defs.capitalize(session.userData.meteoData.Country))
                     .subtitle(meteoData.weather[0].description)
                     .text("Température : " + meteoData.main.temp + "°C" +
                     " - Direction du vent : " + botextapis.GetWindDirection(meteoData.wind) + 
