@@ -366,7 +366,7 @@ bot.dialog('/meteo', [
                 
         botextapis.GetMeteoData(errorCallback, session.userData.meteoData.City, session.userData.meteoData.Country , function(errorCallback, meteoData){
 
-            if(errorCallback === null)
+            if(!errorCallback)
             {
             session.userData.meteoData.Latitude = meteoData.coord.lat;
             session.userData.meteoData.Longitude = meteoData.coord.lon;
