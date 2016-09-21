@@ -391,7 +391,7 @@ bot.dialog('/meteo', [
             {
                 var msg = new builder.Message(session)
                 .text("Une erreur est survenue. Je vous invite à renouveler votre demande...");
-            }
+            };
             // Send the message to the user and end the dialog
             session.send(msg);
             
